@@ -26,7 +26,6 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -37,6 +36,19 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow DietBuddy to access your photos to log meals.",
+          "cameraPermission": "Allow DietBuddy to use the camera to scan your food."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow DietBuddy to access your microphone to log audio entries."
         }
       ]
     ],

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "primary-container": "#ff516a",
+                "error-container": "#93000a",
+                "on-secondary": "#002e6a",
+                "on-secondary-fixed": "#001a42",
+                "surface-container-highest": "#423031",
+                "surface": "#1e0f10",
+                "on-primary": "#67001b",
+                "inverse-on-surface": "#3e2c2d",
+                "on-tertiary-fixed": "#002113",
+                "on-error-container": "#ffdad6",
+                "on-tertiary-fixed-variant": "#005236",
+                "surface-container-lowest": "#180a0b",
+                "on-surface-variant": "#e3bdbf",
+                "primary": "#ffb2b7",
+                "on-tertiary": "#003824",
+                "background": "#09090b",
+                "tertiary-fixed": "#6ffbbe",
+                "surface-container-low": "#271718",
+                "on-surface": "#f9dcdc",
+                "on-primary-fixed-variant": "#92002a",
+                "surface-dim": "#1e0f10",
+                "secondary-fixed": "#d8e2ff",
+                "on-secondary-fixed-variant": "#004395",
+                "surface-variant": "#423031",
+                "tertiary-fixed-dim": "#4edea3",
+                "primary-fixed-dim": "#ffb2b7",
+                "on-tertiary-container": "#00311f",
+                "on-background": "#f9dcdc",
+                "error": "#ffb4ab",
+                "secondary": "#adc6ff",
+                "on-error": "#690005",
+                "tertiary": "#4edea3",
+                "secondary-fixed-dim": "#adc6ff",
+                "tertiary-container": "#00a572",
+                "surface-tint": "#ffb2b7",
+                "surface-bright": "#473435",
+                "inverse-primary": "#bc0b3b",
+                "outline-variant": "#5b4041",
+                "inverse-surface": "#f9dcdc",
+                "on-primary-container": "#5b0017",
+                "outline": "#aa888a",
+                "primary-fixed": "#ffdadb",
+                "on-secondary-container": "#e6ecff",
+                "surface-container": "#2b1b1c",
+                "surface-container-high": "#372626",
+                "secondary-container": "#0566d9",
+                "on-primary-fixed": "#40000d"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "xs": "4px",
+                "lg": "24px",
+                "md": "16px",
+                "gutter": "16px",
+                "container-margin": "20px",
+                "unit": "4px",
+                "xl": "40px",
+                "sm": "8px"
+            },
+            "fontFamily": {
+                "headline-lg": ["Inter"],
+                "numeric-data": ["Inter"],
+                "display-xl": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-caps": ["Inter"],
+                "body-md": ["Inter"],
+                "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                "headline-lg": ["32px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "numeric-data": ["20px", {"lineHeight": "1.0", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "display-xl": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "label-caps": ["12px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-etched-border {
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
+        .glow-rose {
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.2);
+        }
+        .text-neon-rose {
+            color: #ff516a;
+            text-shadow: 0 0 12px rgba(255, 81, 106, 0.4);
+        }
+        .electric-blue {
+            color: #adc6ff;
+        }
+        .obsidian-bg {
+            background-color: #09090b;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #09090b;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-32">
+<!-- TopAppBar Section -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-zinc-950/60 backdrop-blur-lg border-b border-white/10 flex justify-between items-center w-full px-5 py-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-zinc-100" data-icon="close">close</span>
+</div>
+<h1 class="font-sans text-sm tracking-widest uppercase font-bold text-zinc-100">Workout Session</h1>
+<div class="flex items-center gap-2 text-rose-500">
+<span class="text-sm font-numeric-data">42:15</span>
+<span class="material-symbols-outlined" data-icon="timer">timer</span>
+</div>
+</header>
+<main class="mt-20 px-container-margin space-y-lg">
+<!-- Progress Indicator -->
+<section class="flex flex-col items-center py-md">
+<div class="relative w-32 h-32 flex items-center justify-center">
+<svg class="w-full h-full -rotate-90">
+<circle class="text-white/5" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-width="4"></circle>
+<circle class="text-primary-container drop-shadow-[0_0_8px_#ff516a]" cx="64" cy="64" fill="transparent" r="58" stroke="currentColor" stroke-dasharray="364.4" stroke-dashoffset="109.3" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-xl text-headline-md leading-none">70%</span>
+<span class="font-label-caps text-[10px] text-zinc-500">DONE</span>
+</div>
+</div>
+</section>
+<!-- Stats Grid -->
+<section class="grid grid-cols-2 gap-md">
+<div class="glass-card rounded-xl p-md flex flex-col items-center justify-center glow-rose border-rose-500/20">
+<span class="material-symbols-outlined text-rose-500 mb-2" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="text-zinc-400 font-label-caps text-[10px]">HEART RATE</span>
+<span class="font-display-xl text-headline-lg text-neon-rose mt-1">142</span>
+<span class="text-zinc-500 font-body-md text-xs">BPM</span>
+</div>
+<div class="glass-card rounded-xl p-md flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-tertiary mb-2" data-icon="local_fire_department" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="text-zinc-400 font-label-caps text-[10px]">CALORIES</span>
+<span class="font-display-xl text-headline-lg text-tertiary mt-1">384</span>
+<span class="text-zinc-500 font-body-md text-xs">KCAL</span>
+</div>
+</section>
+<!-- Exercise List -->
+<section class="space-y-md">
+<div class="flex justify-between items-end">
+<h2 class="font-headline-md text-zinc-100">Exercises</h2>
+<span class="font-label-caps text-xs text-zinc-500">4 OF 6 COMPLETED</span>
+</div>
+<!-- Card 1 -->
+<div class="glass-card rounded-xl overflow-hidden border-l-4 border-l-primary-container">
+<div class="p-md border-b border-white/5 flex justify-between items-center">
+<div>
+<h3 class="font-headline-md text-body-lg text-zinc-100">Bench Press</h3>
+<p class="text-zinc-500 font-body-md text-xs uppercase tracking-wider">Chest / Barbell</p>
+</div>
+<span class="material-symbols-outlined text-primary-container" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="p-md">
+<table class="w-full text-left">
+<thead>
+<tr class="font-label-caps text-[10px] text-zinc-500">
+<th class="pb-2">SET</th>
+<th class="pb-2">LBS</th>
+<th class="pb-2">REPS</th>
+<th class="pb-2 text-right">STATUS</th>
+</tr>
+</thead>
+<tbody class="font-numeric-data text-sm">
+<tr class="border-b border-white/5">
+<td class="py-3 text-zinc-400">1</td>
+<td class="py-3 electric-blue">185</td>
+<td class="py-3 text-zinc-100">10</td>
+<td class="py-3 text-right"><span class="material-symbols-outlined text-zinc-700 text-sm" data-icon="done">done</span></td>
+</tr>
+<tr class="border-b border-white/5">
+<td class="py-3 text-zinc-400">2</td>
+<td class="py-3 electric-blue">185</td>
+<td class="py-3 text-zinc-100">8</td>
+<td class="py-3 text-right"><span class="material-symbols-outlined text-zinc-700 text-sm" data-icon="done">done</span></td>
+</tr>
+<tr>
+<td class="py-3 text-zinc-400">3</td>
+<td class="py-3 electric-blue">195</td>
+<td class="py-3 text-zinc-100">6</td>
+<td class="py-3 text-right"><span class="material-symbols-outlined text-zinc-700 text-sm" data-icon="done">done</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Card 2 (Active) -->
+<div class="glass-card rounded-xl overflow-hidden border-l-4 border-l-zinc-700">
+<div class="p-md border-b border-white/5 flex justify-between items-center bg-white/5">
+<div>
+<h3 class="font-headline-md text-body-lg text-zinc-100">Incline Dumbbell Fly</h3>
+<p class="text-zinc-500 font-body-md text-xs uppercase tracking-wider">Upper Chest / Dumbbell</p>
+</div>
+<span class="material-symbols-outlined text-zinc-500 animate-pulse" data-icon="pending">pending</span>
+</div>
+<div class="p-md">
+<table class="w-full text-left">
+<thead>
+<tr class="font-label-caps text-[10px] text-zinc-500">
+<th class="pb-2">SET</th>
+<th class="pb-2">LBS</th>
+<th class="pb-2">REPS</th>
+<th class="pb-2 text-right">STATUS</th>
+</tr>
+</thead>
+<tbody class="font-numeric-data text-sm">
+<tr class="border-b border-white/5">
+<td class="py-3 text-zinc-400">1</td>
+<td class="py-3 electric-blue">45</td>
+<td class="py-3 text-zinc-100">12</td>
+<td class="py-3 text-right"><span class="material-symbols-outlined text-zinc-700 text-sm" data-icon="done">done</span></td>
+</tr>
+<tr class="border-b border-white/5 bg-primary-container/10">
+<td class="py-3 text-zinc-400">2</td>
+<td class="py-3 electric-blue">50</td>
+<td class="py-3 text-zinc-100">—</td>
+<td class="py-3 text-right"><button class="bg-primary-container text-on-primary-container px-3 py-1 rounded-full text-[10px] font-bold">START</button></td>
+</tr>
+<tr>
+<td class="py-3 text-zinc-400">3</td>
+<td class="py-3 electric-blue">50</td>
+<td class="py-3 text-zinc-100">—</td>
+<td class="py-3 text-right"><span class="material-symbols-outlined text-zinc-800 text-sm" data-icon="lock">lock</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="glass-card rounded-xl overflow-hidden opacity-40">
+<div class="p-md border-b border-white/5">
+<h3 class="font-headline-md text-body-lg text-zinc-100">Triceps Pushdown</h3>
+<p class="text-zinc-500 font-body-md text-xs uppercase tracking-wider">Triceps / Cable</p>
+</div>
+</div>
+</section>
+<!-- Aesthetic Imagery -->
+<section class="pb-12">
+<div class="relative rounded-2xl overflow-hidden h-40 group">
+<img class="w-full h-full object-cover" data-alt="cinematic close-up of a weight bench in a dim high-end gym with atmospheric moody red lighting and lens flare" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2Pj_9JDehjJXf_GX9Fa4kFQSIp0TWy3xSASKVFXWJW8H4iHoCpIMciK3qn_ls1TVNFYzEWh4uL2BG3FL0WBQ91jGeYzPUtGTUZJeQ8PIPhYatLsPHfafOGoNzzairck0Hc7JE7kBBGRtWas27T4pcG4n0RVPvQBtKSm9c_0ti1zZ_7ZlQtLPFUXq4xiS6DKOOvwNEXYjW6Kej0Enq7a1xNjGfSL5aYPdxdDyqjiAe_STXm5mMDJU7uS4nRGJdKLJDTJlhfXyzioC6"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="font-label-caps text-xs text-rose-400">UP NEXT</span>
+<p class="font-headline-md text-sm text-zinc-100">Finish strong with Cable Rows</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Section -->
+<nav class="fixed bottom-8 left-1/2 -translate-x-1/2 w-[85%] max-w-xs z-50 flex justify-around items-center px-4 py-3 bg-zinc-900/40 backdrop-blur-2xl rounded-full border border-white/10 glass-etched-border shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+<div class="flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-all">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</div>
+<div class="flex items-center justify-center text-rose-500 relative after:content-[''] after:absolute after:-bottom-2 after:w-1 after:h-1 after:bg-rose-500 after:rounded-full after:shadow-[0_0_8px_#f43f5e] scale-110 duration-300 ease-out">
+<span class="material-symbols-outlined" data-icon="fitness_center">fitness_center</span>
+</div>
+<!-- FAB Logic integration -->
+<button class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container shadow-[0_0_20px_rgba(255,81,106,0.5)] flex items-center justify-center -mt-8 border-4 border-background">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<div class="flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-all">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+</div>
+<div class="flex items-center justify-center text-zinc-500 hover:text-zinc-200 transition-all">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</div>
+</nav>
+</body></html>
