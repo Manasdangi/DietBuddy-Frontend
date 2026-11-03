@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
@@ -21,10 +22,24 @@ const prepareImage = async (uri) => {
   return { data: saved.base64, mimeType: 'image/jpeg' };
 };
 
+// On the web, recordings are blob: URLs (webm on Chrome, mp4 on Safari) and expo-file-system can't read them
+const readAudioWeb = async (uri, fallbackMime) => {
+  const blob = await (await fetch(uri)).blob();
+  const data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  // "audio/webm;codecs=opus" -> "audio/webm"
+  return { data, mimeType: (blob.type || fallbackMime).split(';')[0] };
+};
+
 const buildBody = async (input, mimeType, type) => {
   if (type === 'text') return { type: 'text', text: input };
   if (type === 'image') return { type: 'image', ...(await prepareImage(input)) };
   if (type === 'audio') {
+    if (Platform.OS === 'web') return { type: 'audio', ...(await readAudioWeb(input, mimeType)) };
     const data = await FileSystem.readAsStringAsync(input, { encoding: 'base64' });
     return { type: 'audio', data, mimeType };
   }

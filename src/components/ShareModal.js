@@ -1,9 +1,31 @@
 import React, { useRef, useState } from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Share, useWindowDimensions } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Share, Platform, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import captureCard from '../utils/captureCard';
 import ShareCard, { CARD_WIDTH, CARD_HEIGHT } from './ShareCard';
+
+// Web: share the PNG through the phone's share sheet when the browser allows it, otherwise download it
+const shareImageWeb = async (dataUri) => {
+  const blob = await (await fetch(dataUri)).blob();
+  const file = new File([blob], 'dietbuddy-day.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'My day on DietBuddy' });
+      return;
+    } catch (e) {
+      if (e?.name === 'AbortError') return; // user closed the share sheet
+      // otherwise fall through to download
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dietbuddy-day.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+};
 
 export default function ShareModal({ visible, onClose, cardProps }) {
   const cardRef = useRef(null);
@@ -15,8 +37,10 @@ export default function ShareModal({ visible, onClose, cardProps }) {
   const handleShare = async () => {
     setBusy(true);
     try {
-      const uri = await captureRef(cardRef, { format: 'png', quality: 1, width: 1080, height: 1920 });
-      if (await Sharing.isAvailableAsync()) {
+      const uri = await captureCard(cardRef, cardProps);
+      if (Platform.OS === 'web') {
+        await shareImageWeb(uri);
+      } else if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your day', UTI: 'public.png' });
       } else {
         // Web fallback: share text instead of the image

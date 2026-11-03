@@ -113,6 +113,9 @@ export default function AddScreen({ navigation }) {
   };
 
   const openCameraOrGallery = () => {
+    // Alert buttons don't exist on the web. The browser's own file picker already offers
+    // "Take Photo" and "Photo Library" on phones.
+    if (Platform.OS === 'web') return openGallery();
     Alert.alert('Upload Image', 'Choose an option', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Choose from Gallery', onPress: openGallery },
