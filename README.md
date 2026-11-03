@@ -43,6 +43,10 @@ React Native · Expo 54 · Zustand (persisted with AsyncStorage) · Gemini (via 
    npx expo start
    ```
 
+### Use it on your phone without a laptop
+
+DietBuddy also runs as a web app. Deploy `server/` and the app to Vercel (see [`server/README.md`](server/README.md)), open the link in Safari or Chrome, and use **Share → Add to Home Screen** to get an app icon.
+
 ## Project structure
 
 ```
