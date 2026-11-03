@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Daily targets per goal (fat ~25-30% of calories)
+export const GOAL_TARGETS = {
+  bulking: { calories: 3000, protein: 180, carbs: 400, fat: 85 },
+  cutting: { calories: 2000, protein: 150, carbs: 200, fat: 60 },
+};
+
 // Keep history bounded so AsyncStorage doesn't grow forever
 const MAX_LOGS = 500;
 
@@ -22,11 +28,8 @@ const useStore = create(
     (set, get) => ({
       goal: null, // 'bulking' or 'cutting'
       theme: 'dark', // 'light' or 'dark'
-      dailyGoal: {
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-      },
+      dailyGoal: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+      roastMode: false, // funny, savage AI comments on meals
       dayKey: getDayKey(),
       currentDay: { ...EMPTY_DAY },
       logs: [], // all logged meals, newest first (each has loggedAt + dayKey)
@@ -36,13 +39,12 @@ const useStore = create(
         theme: state.theme === 'dark' ? 'light' : 'dark'
       })),
 
-      setGoal: (newGoal) => set(() => {
-        // Default mock values for goals
-        const dailyGoal = newGoal === 'bulking'
-          ? { calories: 3000, protein: 180, carbs: 400 }
-          : { calories: 2000, protein: 150, carbs: 200 };
-        return { goal: newGoal, dailyGoal };
-      }),
+      toggleRoastMode: () => set((state) => ({ roastMode: !state.roastMode })),
+
+      setGoal: (newGoal) => set(() => ({
+        goal: newGoal,
+        dailyGoal: { ...(GOAL_TARGETS[newGoal] || GOAL_TARGETS.cutting) },
+      })),
 
       // Reset today's totals if the calendar day changed. History is kept.
       ensureToday: () => {
@@ -84,12 +86,23 @@ const useStore = create(
     }),
     {
       name: 'dietbuddy-store',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       // Save data only, not the hydration flag or functions
-      partialize: ({ goal, theme, dailyGoal, dayKey, currentDay, logs }) => ({
-        goal, theme, dailyGoal, dayKey, currentDay, logs,
+      partialize: ({ goal, theme, dailyGoal, roastMode, dayKey, currentDay, logs }) => ({
+        goal, theme, dailyGoal, roastMode, dayKey, currentDay, logs,
       }),
+      migrate: (persisted, version) => {
+        const state = persisted || {};
+        if (version < 2) {
+          // v2 added fat targets
+          if (state.goal && !state.dailyGoal?.fat) {
+            state.dailyGoal = { ...state.dailyGoal, fat: GOAL_TARGETS[state.goal]?.fat || 0 };
+          }
+          state.currentDay = { ...EMPTY_DAY, ...state.currentDay };
+        }
+        return state;
+      },
       onRehydrateStorage: () => (state, error) => {
         if (error) console.warn('Could not load saved data:', error);
         // Runs after saved data loads (or fails to load)

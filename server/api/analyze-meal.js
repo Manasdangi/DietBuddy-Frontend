@@ -5,6 +5,7 @@
 //   { "type": "text",  "text": "2 roti and dal" }
 //   { "type": "image", "data": "<base64>", "mimeType": "image/jpeg" }
 //   { "type": "audio", "data": "<base64>", "mimeType": "audio/m4a" }
+//   Add "mode": "roast" to any of these for a funny roast comment instead of a tip.
 //
 // Env vars (set in Vercel project settings):
 //   GEMINI_API_KEY    required
@@ -23,33 +24,66 @@ const ALLOWED_MIME = {
   audio: ['audio/m4a', 'audio/mp4', 'audio/aac', 'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/webm', 'audio/flac', 'audio/opus'],
 };
 
-const SYSTEM_PROMPT = `You are a highly capable AI nutrition assistant.
-Analyze the user's input (a photo of food, a voice note describing food, or a text description).
-Identify every food item and estimate realistic portion sizes. You understand Indian food well
-(roti, dal, sabzi, rice, paneer, thali, etc.) and common Indian portion terms like katori and plate.
-Estimate total calories, protein, carbs and fat for the whole meal.
-If audio is provided, include a transcript of what the user said; otherwise use an empty string.
-If the input contains no food, set foodName to "No food detected", all macros to 0, and confidence to "low".`;
+const SYSTEM_PROMPT = `You are DietBuddy, an AI nutrition assistant built for Indian users.
+Analyze the user's input (a photo of food, a voice note, or a text description).
+
+Indian food first:
+- Recognise Indian dishes accurately: roti/chapati, paratha, dal, rajma, chole, sabzi, rice, biryani,
+  paneer dishes, idli, dosa, poha, upma, thali components, street food, sweets, chai.
+- Use Indian portion language: katori (~150 ml bowl), plate, piece, roti count, glass, scoop.
+  Example: "2 roti, 1 katori dal, 1 katori bhindi sabzi".
+- Account for home-style oil and ghee. A restaurant curry has more fat than home-cooked.
+- Voice notes may be in Hindi, English or Hinglish. Understand all of them. Transcribe in the
+  original words using Roman script (e.g. "maine do roti aur dal khayi").
+
+Return:
+- items: each food with a portion and its own macros.
+- macros: totals for the whole meal (sum of items).
+- foodName: a short comma separated summary of the items.
+- If audio is provided, transcription is what the user said; otherwise an empty string.
+- If there is no food, set foodName to "No food detected", items to [], macros to 0, confidence "low".`;
+
+const ROAST_PROMPT = `
+Roast mode is ON. In "comment", write a short, funny, brutally honest one-liner about this meal
+(max 25 words), like a savage desi gym friend. Roast the food choice, never the person's body,
+weight or looks. No slurs, nothing hateful. Hinglish is welcome.`;
+
+const NORMAL_PROMPT = `
+In "comment", write one short, friendly, useful tip about this meal (max 25 words).`;
+
+const MACROS_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    calories: { type: 'NUMBER' },
+    protein: { type: 'NUMBER', description: 'grams' },
+    carbs: { type: 'NUMBER', description: 'grams' },
+    fat: { type: 'NUMBER', description: 'grams' },
+  },
+  required: ['calories', 'protein', 'carbs', 'fat'],
+};
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
     transcription: { type: 'STRING' },
-    foodName: { type: 'STRING', description: 'Comma separated list of identified items' },
-    macros: {
-      type: 'OBJECT',
-      properties: {
-        calories: { type: 'NUMBER' },
-        protein: { type: 'NUMBER', description: 'grams' },
-        carbs: { type: 'NUMBER', description: 'grams' },
-        fat: { type: 'NUMBER', description: 'grams' },
+    foodName: { type: 'STRING', description: 'Short comma separated summary of items' },
+    items: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          name: { type: 'STRING' },
+          portion: { type: 'STRING', description: 'e.g. "2 roti", "1 katori", "1 plate"' },
+          macros: MACROS_SCHEMA,
+        },
+        required: ['name', 'portion', 'macros'],
       },
-      required: ['calories', 'protein', 'carbs', 'fat'],
     },
+    macros: MACROS_SCHEMA,
     confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] },
-    notes: { type: 'STRING', description: 'A short helpful tip or warning' },
+    comment: { type: 'STRING' },
   },
-  required: ['transcription', 'foodName', 'macros', 'confidence', 'notes'],
+  required: ['transcription', 'foodName', 'items', 'macros', 'confidence', 'comment'],
 };
 
 function setCors(req, res) {
@@ -90,19 +124,36 @@ export function buildParts(body) {
   return { error: 'type must be "text", "image" or "audio"' };
 }
 
-// Coerces Gemini's JSON into the exact shape the app expects
-export function normalizeResult(raw) {
+const MAX_ITEMS = 20;
+
+const toMacros = (m = {}) => {
   const n = (v) => {
     const x = Number(v);
     return Number.isFinite(x) && x >= 0 ? Math.round(x) : 0;
   };
-  const m = raw?.macros || {};
+  return { calories: n(m.calories), protein: n(m.protein), carbs: n(m.carbs), fat: n(m.fat) };
+};
+
+// Coerces Gemini's JSON into the exact shape the app expects
+export function normalizeResult(raw, { roast = false } = {}) {
+  const items = Array.isArray(raw?.items)
+    ? raw.items.slice(0, MAX_ITEMS).filter((i) => i && typeof i.name === 'string' && i.name).map((i) => ({
+        name: i.name,
+        portion: typeof i.portion === 'string' ? i.portion : '',
+        macros: toMacros(i.macros),
+      }))
+    : [];
+  const comment = typeof raw?.comment === 'string' ? raw.comment : '';
   return {
     transcription: typeof raw?.transcription === 'string' ? raw.transcription : '',
     foodName: typeof raw?.foodName === 'string' && raw.foodName ? raw.foodName : 'Unknown food',
-    macros: { calories: n(m.calories), protein: n(m.protein), carbs: n(m.carbs), fat: n(m.fat) },
+    items,
+    macros: toMacros(raw?.macros),
     confidence: ['high', 'medium', 'low'].includes(raw?.confidence) ? raw.confidence : 'low',
-    notes: typeof raw?.notes === 'string' ? raw.notes : '',
+    // "notes" kept for older app versions
+    notes: comment,
+    comment,
+    roast: roast && Boolean(comment),
   };
 }
 
@@ -126,6 +177,7 @@ export default async function handler(req, res) {
 
   const { parts, error, status } = buildParts(body);
   if (error) return res.status(status || 400).json({ error });
+  const roast = body.mode === 'roast';
 
   const model = process.env.GEMINI_MODEL || DEFAULT_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -135,12 +187,13 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT + (roast ? ROAST_PROMPT : NORMAL_PROMPT) }] },
         contents: [{ role: 'user', parts }],
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: RESPONSE_SCHEMA,
-          temperature: 0.2,
+          // A little more creativity for roasts, accuracy otherwise
+          temperature: roast ? 0.8 : 0.2,
         },
       }),
     });
@@ -162,7 +215,7 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'AI returned an invalid response' });
     }
 
-    return res.status(200).json(normalizeResult(parsed));
+    return res.status(200).json(normalizeResult(parsed, { roast }));
   } catch (e) {
     console.error('analyze-meal failed', e);
     return res.status(500).json({ error: 'Something went wrong' });

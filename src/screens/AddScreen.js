@@ -8,13 +8,37 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import { BlurView } from 'expo-blur';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import useStore from '../store/useStore';
 import { useThemeColors, typography, spacing, borderRadius } from '../utils/theme';
 import { analyzeDietInput } from '../services/mealService';
 
+const QUICK_MEALS = [
+  '2 roti + 1 katori dal + sabzi',
+  '1 plate chicken biryani',
+  'Paneer butter masala + 2 naan',
+  'Masala dosa with sambar',
+  'Poha + 1 cup chai',
+  '3 egg bhurji + 2 toast',
+];
+
+// Photos from the camera/gallery live in a cache folder that the OS can clear.
+// Copy them so the home screen can still show the latest meal later.
+const keepPhoto = async (uri) => {
+  try {
+    const dir = `${FileSystem.documentDirectory}meals/`;
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    const dest = `${dir}${Date.now()}.jpg`;
+    await FileSystem.copyAsync({ from: uri, to: dest });
+    return dest;
+  } catch {
+    return uri;
+  }
+};
+
 export default function AddScreen({ navigation }) {
-  const { theme, addLog } = useStore();
+  const { theme, addLog, roastMode, toggleRoastMode } = useStore();
   const colors = useThemeColors();
   const styles = getStyles(colors);
   const flatListRef = useRef(null);
@@ -24,7 +48,7 @@ export default function AddScreen({ navigation }) {
       id: '1',
       role: 'assistant',
       type: 'text',
-      content: 'Hi! I am DietBuddy AI. You can type what you ate, upload a photo of your meal, or send a voice note about your workout.',
+      content: 'Hi! I am DietBuddy AI. Snap your plate, type what you ate, or send a voice note in Hindi, English or Hinglish. Turn on 🔥 Roast for brutally honest comments.',
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -42,7 +66,7 @@ export default function AddScreen({ navigation }) {
     setIsAnalyzing(true);
     addMessage({ role: 'assistant', type: 'loading' });
     try {
-      const result = await analyzeDietInput(uri || textContent, mimeType, type);
+      const result = await analyzeDietInput(uri || textContent, mimeType, type, { roast: roastMode });
       
       // Remove loading message
       setMessages(prev => {
@@ -62,7 +86,10 @@ export default function AddScreen({ navigation }) {
       });
       
       // Save globally (skip non-food inputs so they don't count toward totals)
-      if (result.foodName !== 'No food detected') addLog(result);
+      if (result.foodName !== 'No food detected') {
+        const imageUri = type === 'image' && uri ? await keepPhoto(uri) : undefined;
+        addLog(imageUri ? { ...result, imageUri } : result);
+      }
     } catch (e) {
       setMessages(prev => prev.filter(m => m.type !== 'loading'));
       addMessage({ role: 'assistant', type: 'text', content: `Oops! I had trouble analyzing that. ${e?.message || 'Please try again.'}` });
@@ -72,12 +99,17 @@ export default function AddScreen({ navigation }) {
     }
   };
 
+  const sendText = (text) => {
+    if (isAnalyzing) return;
+    addMessage({ role: 'user', type: 'text', content: text });
+    processAI(null, null, 'text', text);
+  };
+
   const handleSendText = () => {
     if (!inputText.trim()) return;
     const text = inputText.trim();
     setInputText('');
-    addMessage({ role: 'user', type: 'text', content: text });
-    processAI(null, null, 'text', text);
+    sendText(text);
   };
 
   const openCameraOrGallery = () => {
@@ -160,19 +192,36 @@ export default function AddScreen({ navigation }) {
     }
 
     if (item.type === 'result') {
+      const data = item.parsedData;
+      const m = data.macros || {};
       return (
         <View style={[styles.messageRow, styles.assistantRow]}>
           <View style={styles.assistantAvatar}>
             <Ionicons name="sparkles" size={16} color="#FFF" />
           </View>
-          <View style={[styles.messageBubble, styles.assistantBubble, { minWidth: 200 }]}>
-            <Text style={styles.resultTitle}>{item.parsedData.foodName || 'Activity Logged'}</Text>
+          <View style={[styles.messageBubble, styles.assistantBubble, { minWidth: 220, maxWidth: '85%' }]}>
+            <Text style={styles.resultTitle}>{data.foodName || 'Activity Logged'}</Text>
             <View style={styles.macrosRow}>
-              <View style={styles.macroBadge}><Text style={styles.macroText}>🔥 {item.parsedData.macros?.calories || 0} kcal</Text></View>
-              <View style={styles.macroBadge}><Text style={styles.macroText}>🥩 {item.parsedData.macros?.protein || 0}g P</Text></View>
-              <View style={styles.macroBadge}><Text style={styles.macroText}>🍞 {item.parsedData.macros?.carbs || 0}g C</Text></View>
+              <View style={styles.macroBadge}><Text style={styles.macroText}>🔥 {m.calories || 0} kcal</Text></View>
+              <View style={styles.macroBadge}><Text style={styles.macroText}>🥩 {m.protein || 0}g P</Text></View>
+              <View style={styles.macroBadge}><Text style={styles.macroText}>🍞 {m.carbs || 0}g C</Text></View>
+              <View style={styles.macroBadge}><Text style={styles.macroText}>🧈 {m.fat || 0}g F</Text></View>
             </View>
-            <Text style={styles.resultNotes}>{item.parsedData.notes}</Text>
+            {data.items?.length > 1 && (
+              <View style={styles.itemsList}>
+                {data.items.map((it, i) => (
+                  <View key={`${it.name}-${i}`} style={styles.itemRow}>
+                    <Text style={styles.itemName} numberOfLines={1}>{it.name} <Text style={styles.itemPortion}>· {it.portion}</Text></Text>
+                    <Text style={styles.itemKcal}>{it.macros?.calories || 0} kcal</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            {(data.comment || data.notes) ? (
+              <Text style={[styles.resultNotes, data.roast && styles.roastNotes]}>
+                {data.roast ? '🔥 ' : ''}{data.comment || data.notes}
+              </Text>
+            ) : null}
           </View>
         </View>
       );
@@ -201,8 +250,17 @@ export default function AddScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, styles.headerRow]}>
         <Text style={styles.title}>DietBuddy AI</Text>
+        <TouchableOpacity
+          onPress={toggleRoastMode}
+          style={[styles.roastToggle, roastMode && styles.roastToggleOn]}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: roastMode }}
+          accessibilityLabel="Roast my plate mode"
+        >
+          <Text style={[styles.roastToggleText, roastMode && { color: '#FFF' }]}>🔥 Roast {roastMode ? 'ON' : 'OFF'}</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -213,6 +271,18 @@ export default function AddScreen({ navigation }) {
         contentContainerStyle={styles.chatContainer}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        ListFooterComponent={messages.some((msg) => msg.role === 'user') ? null : (
+          <View style={styles.quickWrap}>
+            <Text style={styles.quickLabel}>Try a quick log</Text>
+            <View style={styles.quickRow}>
+              {QUICK_MEALS.map((q) => (
+                <TouchableOpacity key={q} style={styles.quickChip} onPress={() => sendText(q)} disabled={isAnalyzing}>
+                  <Text style={styles.quickChipText}>{q}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       />
 
       <KeyboardAvoidingView 
@@ -363,6 +433,82 @@ const getStyles = (colors) => StyleSheet.create({
     ...typography.bodySecondary,
     color: colors.textSecondary,
     fontStyle: 'italic',
+  },
+  roastNotes: {
+    color: colors.primary,
+    fontStyle: 'normal',
+    fontFamily: 'Outfit_600SemiBold',
+  },
+  itemsList: {
+    marginBottom: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.xs,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 3,
+    gap: spacing.xs,
+  },
+  itemName: {
+    ...typography.bodySecondary,
+    color: colors.text,
+    flexShrink: 1,
+  },
+  itemPortion: {
+    color: colors.textSecondary,
+  },
+  itemKcal: {
+    ...typography.bodySecondary,
+    color: colors.textSecondary,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  roastToggle: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceLight,
+  },
+  roastToggleOn: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  roastToggleText: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 13,
+    color: colors.text,
+  },
+  quickWrap: {
+    marginTop: spacing.sm,
+  },
+  quickLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  quickChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    borderRadius: borderRadius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  quickChipText: {
+    ...typography.bodySecondary,
+    color: colors.text,
   },
   inputContainer: {
     flexDirection: 'row',

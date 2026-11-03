@@ -1,62 +1,63 @@
-# DietBuddy
+# DietBuddy 🍛
 
-A React Native (Expo) diet and nutrition assistant. Log meals by photo, voice note or text, and Gemini AI estimates calories, protein, carbs and fat.
+**Snap your plate. Get your macros. Get roasted.**
+
+DietBuddy is an AI calorie and macro tracker built for Indian food. Take a photo of your thali, type "2 roti + 1 katori dal", or send a voice note in Hinglish, and Gemini breaks it down item by item.
+
+<p align="center">
+  <img src="docs/screenshots/walkthrough.gif" width="260" alt="DietBuddy walkthrough" />
+</p>
+
+## Features
+
+- **Desi food first** — recognises roti, dal, sabzi, biryani, dosa, paneer and more, with Indian portions (katori, plate, roti count) and an item-by-item breakdown.
+- **Log any way** — photo, text, or a voice note in Hindi, English or Hinglish.
+- **🔥 Roast my plate** — flip on Roast mode for a savage one-liner about every meal.
+- **Share your day** — a story-sized card with your macros, streak and today's roast, ready for Instagram.
+- **Streaks** — keep your logging streak alive day after day.
+- **Weekly protein challenge** — hit your protein goal on 5 days a week, and challenge a friend.
+- **Protein gap alerts** — see how much protein you still need and what to eat (paneer, soya, eggs, chicken…).
+- **Calories, protein, carbs and fat** tracked against your bulking or cutting goal.
+- **Saved on your phone** — logs persist, totals reset at midnight, history is kept.
+
+## Screenshots
+
+| Home | Protein challenge | AI breakdown + roast | Share card |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/home-top.png" width="190" /> | <img src="docs/screenshots/home-bottom.png" width="190" /> | <img src="docs/screenshots/chat-result.png" width="190" /> | <img src="docs/screenshots/share-card.png" width="190" /> |
+
+<sub>Captured from the web build with sample data and a sample AI response.</sub>
+
+## Tech stack
+
+React Native · Expo 54 · Zustand (persisted with AsyncStorage) · Gemini (via a Vercel serverless function) · react-native-view-shot + expo-sharing
 
 ## Setup
 
-1. Deploy the API in [`server/`](server/README.md) (it holds the Gemini key).
+1. Deploy the API in [`server/`](server/README.md). It holds the Gemini key, so the key never ships inside the app.
 2. Copy `.env.example` to `.env` and set `EXPO_PUBLIC_API_URL` to the deployed URL.
-3. `npm install`, then `npx expo start`.
-
-Meal logs and daily totals are saved on the device and reset each day; history is kept.
-
----
-
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
+3. Install and run:
 
    ```bash
    npm install
-   ```
-
-2. Start the app
-
-   ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## Project structure
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+src/
+  screens/      Home, Add (AI chat), Log, Workout, History, Onboarding
+  components/   ShareCard, ShareModal
+  services/     mealService.js — calls the API
+  store/        useStore.js — persisted app state
+  utils/        nutrition.js — streaks, weekly challenge, protein suggestions
+server/
+  api/analyze-meal.js — Gemini proxy (Vercel function)
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Roadmap
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Friend leaderboards for challenges (needs accounts + a backend database)
+- Real data on the Log and Workout tabs
+- Water and steps tracking

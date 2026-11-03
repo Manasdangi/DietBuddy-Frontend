@@ -31,6 +31,9 @@ export default function HistoryScreen() {
               <View style={[styles.macroPill, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                 <Text style={[styles.macroText, { color: colors.secondary }]}>{item.macros?.carbs}g C</Text>
               </View>
+              <View style={[styles.macroPill, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <Text style={[styles.macroText, { color: '#F59E0B' }]}>{item.macros?.fat || 0}g F</Text>
+              </View>
             </View>
           </View>
         </BlurView>
