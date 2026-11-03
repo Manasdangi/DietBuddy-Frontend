@@ -2,15 +2,27 @@
 
 A tiny Vercel function that calls Gemini for the app, so the Gemini API key stays on the server and never ships inside the app bundle.
 
-`POST /api/analyze-meal` takes a text description, a photo, or a voice note and returns:
+`POST /api/analyze-meal` takes a text description, a photo, or a voice note (Hindi, English or Hinglish). Add `"mode": "roast"` for a savage comment instead of a tip.
+
+```json
+{ "type": "text", "text": "2 roti aur 1 katori dal", "mode": "roast" }
+```
+
+Returns:
 
 ```json
 {
   "transcription": "",
-  "foodName": "2 roti, dal",
-  "macros": { "calories": 410, "protein": 14, "carbs": 62, "fat": 9 },
+  "foodName": "Roti, dal",
+  "items": [
+    { "name": "Roti", "portion": "2 roti", "macros": { "calories": 240, "protein": 8, "carbs": 44, "fat": 4 } },
+    { "name": "Dal tadka", "portion": "1 katori", "macros": { "calories": 180, "protein": 9, "carbs": 22, "fat": 6 } }
+  ],
+  "macros": { "calories": 420, "protein": 17, "carbs": 66, "fat": 10 },
   "confidence": "high",
-  "notes": "Good source of fibre"
+  "comment": "Ghar ka khana, solid. But 17g protein? Your biceps filed a complaint.",
+  "notes": "(same as comment, for older app versions)",
+  "roast": true
 }
 ```
 

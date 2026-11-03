@@ -31,14 +31,15 @@ const buildBody = async (input, mimeType, type) => {
   throw new Error(`Unsupported input type: ${type}`);
 };
 
-// Same signature as before: (uri-or-text, mimeType, 'image' | 'audio' | 'text').
+// (uri-or-text, mimeType, 'image' | 'audio' | 'text', { roast })
 // Throws on failure so callers can show an error instead of logging fake data.
-export const analyzeDietInput = async (input, mimeType, type = 'image') => {
+export const analyzeDietInput = async (input, mimeType, type = 'image', { roast = false } = {}) => {
   if (!API_URL) {
     throw new Error('EXPO_PUBLIC_API_URL is not set. Deploy the server and add its URL to .env');
   }
 
   const body = await buildBody(input, mimeType, type);
+  if (roast) body.mode = 'roast';
   if (body.data && body.data.length > MAX_BASE64_CHARS) {
     throw new Error(type === 'audio' ? 'Voice note is too long. Keep it under a minute.' : 'Image is too large.');
   }

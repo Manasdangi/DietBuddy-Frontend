@@ -111,3 +111,25 @@ test('normalizeResult fills gaps and clamps junk', () => {
   assert.equal(r.foodName, 'Unknown food');
   assert.equal(r.confidence, 'low');
 });
+
+test('roast mode changes the prompt and flags the result', async () => {
+  mockGemini({ transcription: '', foodName: 'Samosa', items: [{ name: 'Samosa', portion: '3 pieces', macros: { calories: 780, protein: 12, carbs: 80, fat: 45 } }], macros: { calories: 780, protein: 12, carbs: 80, fat: 45 }, confidence: 'high', comment: 'Teen samose? Gym ka membership donate kar do.' });
+  const res = mockRes();
+  await handler({ method: 'POST', headers: {}, body: { type: 'text', text: '3 samosa', mode: 'roast' } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.match(lastRequest.body.systemInstruction.parts[0].text, /Roast mode is ON/);
+  assert.equal(lastRequest.body.generationConfig.temperature, 0.8);
+  assert.equal(res.body.roast, true);
+  assert.equal(res.body.comment, res.body.notes);
+  assert.deepEqual(res.body.items[0], { name: 'Samosa', portion: '3 pieces', macros: { calories: 780, protein: 12, carbs: 80, fat: 45 } });
+});
+
+test('normal mode asks for a tip and drops malformed items', async () => {
+  mockGemini({ transcription: 'maine do roti aur dal khayi', foodName: 'Roti, dal', items: [{ name: 'Roti', portion: '2 roti', macros: { calories: 240 } }, { portion: 'no name' }, null], macros: { calories: 400 }, confidence: 'medium', comment: 'Add some curd for protein.' });
+  const res = mockRes();
+  await handler({ method: 'POST', headers: {}, body: { type: 'text', text: 'do roti dal' } }, res);
+  assert.doesNotMatch(lastRequest.body.systemInstruction.parts[0].text, /Roast mode/);
+  assert.equal(res.body.roast, false);
+  assert.equal(res.body.items.length, 1);
+  assert.equal(res.body.items[0].macros.fat, 0);
+});

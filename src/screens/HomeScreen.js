@@ -1,19 +1,46 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, ImageBackground, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, Share } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useStore from '../store/useStore';
 import { useThemeColors, spacing, typography, gradients, borderRadius } from '../utils/theme';
+import { loggingStreak, proteinSuggestions, weeklyProteinChallenge } from '../utils/nutrition';
+import ShareModal from '../components/ShareModal';
+
+const CHALLENGE_TARGET_DAYS = 5;
+
+const formatTime = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
 
 export default function HomeScreen() {
-  const { goal, dailyGoal, currentDay, theme, toggleTheme } = useStore();
+  const { goal, dailyGoal, currentDay, theme, toggleTheme, logs, dayKey } = useStore();
   const colors = useThemeColors();
   const styles = getStyles(colors);
+  const [shareVisible, setShareVisible] = useState(false);
+
+  const todayLogs = useMemo(() => logs.filter((l) => l.dayKey === dayKey), [logs, dayKey]);
+  const latestMeal = todayLogs[0];
+  const streak = useMemo(() => loggingStreak(logs), [logs]);
+  const challenge = useMemo(() => weeklyProteinChallenge(logs, dailyGoal.protein), [logs, dailyGoal.protein]);
+  const proteinGap = Math.max(0, Math.round(dailyGoal.protein - currentDay.protein));
+  const proteinHit = dailyGoal.protein > 0 && proteinGap === 0;
+  const suggestions = proteinSuggestions(proteinGap);
+  const roastLine = todayLogs.find((l) => l.roast && l.comment)?.comment;
+  const caloriePct = dailyGoal.calories > 0 ? Math.round((currentDay.calories / dailyGoal.calories) * 100) : 0;
+
+  const challengeFriend = () => {
+    Share.share({
+      message: `Protein challenge 💪 Can you hit ${dailyGoal.protein}g protein on ${CHALLENGE_TARGET_DAYS} days this week? I'm at ${challenge.hitCount}/${CHALLENGE_TARGET_DAYS}. Track yours with DietBuddy — just snap your plate and it logs the macros.`,
+    });
+  };
 
   const renderProgress = (current, target, gradientColors) => {
-    const percentage = Math.min((current / target) * 100, 100);
+    const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0;
     return (
       <View style={styles.progressContainer}>
         <LinearGradient
@@ -32,11 +59,8 @@ export default function HomeScreen() {
         {/* Top Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <View style={styles.avatarContainer}>
-              <Image 
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBFDWphd2uHSz2AMG20H8bSbWiY2dbhimqffaCNXeTIZBvhjFdJkt3JkW6biiP4fIhsxRcinC8kGR-n0E9HiCoRK_-zxw6_Fe6CBDEibR1ca2bl0WvHPcwP1j_rjo3D9o9aYg8laCh3LKi9lMB-MpdT-qYLACB88usAeT6y8LqDN2NI9mYXexdtJtw6kcqg-yfugF2eF2O9otx8BuWCbUvHgKPNMiwx9gb4xy_1zTLix7T4NxYQiwmC62jnNZYsU4-LkSJfWirzs7B1' }} 
-                style={styles.avatar} 
-              />
+            <View style={[styles.avatarContainer, styles.avatarIcon]}>
+              <Ionicons name="nutrition" size={20} color={colors.primary} />
             </View>
             <Text style={styles.headerTitle}>DietBuddy</Text>
           </View>
@@ -48,6 +72,9 @@ export default function HomeScreen() {
                 {goal === 'bulking' ? 'BULKING' : 'CUTTING'}
               </Text>
             </View>
+            <TouchableOpacity onPress={() => setShareVisible(true)} style={styles.themeToggle} accessibilityLabel="Share my day">
+              <Ionicons name="share-social-outline" size={20} color={colors.text} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={toggleTheme} style={styles.themeToggle}>
               <Ionicons name={theme === 'dark' ? 'sunny' : 'moon'} size={20} color={colors.text} />
             </TouchableOpacity>
@@ -69,7 +96,7 @@ export default function HomeScreen() {
                 </View>
                 <View>
                   <Text style={styles.percentageText}>
-                    {Math.round((currentDay.calories / dailyGoal.calories) * 100)}%
+                    {caloriePct}%
                   </Text>
                 </View>
               </View>
@@ -83,7 +110,7 @@ export default function HomeScreen() {
                     {Math.max(0, dailyGoal.calories - currentDay.calories)} kcal remaining
                   </Text>
                 </View>
-                <Text style={styles.footerText}>Target: Active</Text>
+                <Text style={styles.footerText}>{currentDay.fat || 0}g fat</Text>
               </View>
             </BlurView>
           </View>
@@ -119,49 +146,131 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Protein gap / goal hit */}
+          <View style={styles.sectionCard}>
+            {proteinHit ? (
+              <>
+                <Text style={styles.sectionTitle}>Protein goal hit 💪</Text>
+                <Text style={styles.sectionSub}>{currentDay.protein}g today. Flex a little.</Text>
+                <TouchableOpacity style={styles.inlineButton} onPress={() => setShareVisible(true)}>
+                  <Ionicons name="share-social" size={16} color="#FFF" />
+                  <Text style={styles.inlineButtonText}>Share it</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>You need {proteinGap}g more protein</Text>
+                <Text style={styles.sectionSub}>Any one of these gets you closer:</Text>
+                <View style={styles.chipRow}>
+                  {suggestions.map((f) => (
+                    <View key={f.name} style={styles.chip}>
+                      <Text style={styles.chipText}>{f.name} · {f.portion}</Text>
+                      <Text style={styles.chipProtein}>~{f.protein}g</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Weekly challenge */}
+          <View style={styles.sectionCard}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>Weekly protein challenge</Text>
+              <Text style={[styles.mealTime, { color: colors.tertiary }]}>{challenge.hitCount}/{CHALLENGE_TARGET_DAYS}</Text>
+            </View>
+            <Text style={styles.sectionSub}>Hit {dailyGoal.protein}g on {CHALLENGE_TARGET_DAYS} days this week</Text>
+            <View style={styles.weekRow}>
+              {challenge.days.map((d) => (
+                <View key={d.key} style={styles.dayCol}>
+                  <View style={[
+                    styles.dayDot,
+                    d.hit && { backgroundColor: colors.tertiary, borderColor: colors.tertiary },
+                    d.isToday && !d.hit && { borderColor: colors.primary },
+                    d.isFuture && { opacity: 0.4 },
+                  ]}>
+                    {d.hit && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                  </View>
+                  <Text style={styles.dayLabel}>{d.label}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={[styles.inlineButton, { backgroundColor: colors.surfaceLight }]} onPress={challengeFriend}>
+              <Ionicons name="people" size={16} color={colors.text} />
+              <Text style={[styles.inlineButtonText, { color: colors.text }]}>Challenge a friend</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Latest Meal */}
           <View style={styles.mealCard}>
             <View style={styles.mealHeader}>
               <Text style={styles.mealTitle}>Latest Meal</Text>
-              <Text style={styles.mealTime}>12:30 PM</Text>
+              <Text style={styles.mealTime}>{latestMeal ? formatTime(latestMeal.loggedAt) : 'TODAY'}</Text>
             </View>
-            <View style={styles.mealImageContainer}>
-              <ImageBackground 
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBYvZRZAw5ervWRP7BpyT-n70z1n6Ko4zvLjaY-vatrm4hqCoAVo2kPOsypPSZEDdhZmJh9QHJ7LYiDNhRgJky1vtR333qP6yeDh6RCzFgErxPPn26dCutQM9jnf7CS37PhYazjGHuyDfTRSevTuCoznL3iI2MqCodan8jLw8wbmUZiSC4RBodQtSM3yJu1DU97VYiO1EiJvz5L7b4Sov7BB6JD_csEGWPIGcAuVZCriGldsAxqwZ1ZwLnvEKK3NySnGcrtB0sNiBUk' }}
-                style={styles.mealImage}
-              >
-                <LinearGradient
-                  colors={['transparent', 'rgba(9, 9, 11, 0.9)']}
-                  style={styles.mealOverlay}
+            {latestMeal ? (
+              <View style={styles.mealImageContainer}>
+                <ImageBackground
+                  source={latestMeal.imageUri ? { uri: latestMeal.imageUri } : undefined}
+                  style={[styles.mealImage, !latestMeal.imageUri && { backgroundColor: colors.surfaceLight }]}
                 >
-                  <Text style={styles.mealName}>Grilled Chicken Salad</Text>
-                  <Text style={styles.mealDesc}>High Protein • 420 kcal</Text>
-                </LinearGradient>
-              </ImageBackground>
-            </View>
+                  {!latestMeal.imageUri && <Text style={styles.mealEmoji}>🍽️</Text>}
+                  <LinearGradient colors={['transparent', 'rgba(9, 9, 11, 0.9)']} style={styles.mealOverlay}>
+                    <Text style={styles.mealName} numberOfLines={1}>{latestMeal.foodName}</Text>
+                    <Text style={styles.mealDesc}>
+                      {latestMeal.macros?.protein || 0}g protein • {latestMeal.macros?.calories || 0} kcal
+                    </Text>
+                  </LinearGradient>
+                </ImageBackground>
+              </View>
+            ) : (
+              <View style={styles.emptyMeal}>
+                <Ionicons name="camera-outline" size={28} color={colors.textSecondary} />
+                <Text style={styles.sectionSub}>Nothing logged yet today. Tap + and snap your plate.</Text>
+              </View>
+            )}
           </View>
 
           {/* Stats Row */}
           <View style={styles.statsCard}>
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>WATER</Text>
-              <Text style={styles.statValue}>2.4L</Text>
+              <Text style={styles.statLabel}>FAT</Text>
+              <Text style={styles.statValue}>{currentDay.fat || 0}g</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>FIBER</Text>
-              <Text style={styles.statValue}>28g</Text>
+              <Text style={styles.statLabel}>MEALS</Text>
+              <Text style={styles.statValue}>{todayLogs.length}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={styles.statLabel}>STEPS</Text>
-              <Text style={styles.statValue}>8.4k</Text>
+              <Text style={styles.statLabel}>STREAK</Text>
+              <Text style={styles.statValue}>{streak} 🔥</Text>
             </View>
           </View>
-          
+
+          <TouchableOpacity style={styles.shareButton} onPress={() => setShareVisible(true)} activeOpacity={0.85}>
+            <LinearGradient colors={gradients.primary} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.shareButtonInner}>
+              <Ionicons name="share-social" size={18} color="#FFF" />
+              <Text style={styles.shareButtonText}>Share my day</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
           <View style={{ height: 100 }} />
         </ScrollView>
       </SafeAreaView>
+
+      <ShareModal
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        cardProps={{
+          dateLabel: new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }),
+          currentDay,
+          dailyGoal,
+          streak,
+          proteinHit,
+          roastLine,
+        }}
+      />
     </View>
   );
 }
@@ -416,5 +525,120 @@ const getStyles = (colors) => StyleSheet.create({
   statDivider: {
     width: 1,
     height: 30,
-  }
+  },
+  avatarIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  sectionCard: {
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    ...typography.h3,
+    fontSize: 18,
+    color: colors.text,
+  },
+  sectionSub: {
+    ...typography.bodySecondary,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chipRow: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  chip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceLight,
+  },
+  chipText: {
+    ...typography.bodySecondary,
+    color: colors.text,
+  },
+  chipProtein: {
+    ...typography.bodySecondary,
+    fontFamily: 'Outfit_700Bold',
+    color: colors.tertiary,
+  },
+  inlineButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: borderRadius.pill,
+    backgroundColor: colors.primary,
+  },
+  inlineButtonText: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    color: '#FFF',
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.md,
+  },
+  dayCol: {
+    alignItems: 'center',
+  },
+  dayDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayLabel: {
+    ...typography.caption,
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 6,
+  },
+  mealEmoji: {
+    fontSize: 48,
+    textAlign: 'center',
+    marginTop: 30,
+  },
+  emptyMeal: {
+    alignItems: 'center',
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  shareButton: {
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.pill,
+    overflow: 'hidden',
+  },
+  shareButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+  },
+  shareButtonText: {
+    fontFamily: 'Outfit_700Bold',
+    fontSize: 16,
+    color: '#FFF',
+  },
 });
