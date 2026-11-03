@@ -11,7 +11,7 @@ import { BlurView } from 'expo-blur';
 
 import useStore from '../store/useStore';
 import { useThemeColors, typography, spacing, borderRadius } from '../utils/theme';
-import { analyzeDietInput } from '../services/geminiService';
+import { analyzeDietInput } from '../services/mealService';
 
 export default function AddScreen({ navigation }) {
   const { theme, addLog } = useStore();
@@ -61,11 +61,11 @@ export default function AddScreen({ navigation }) {
         parsedData: result 
       });
       
-      // Save globally
-      addLog(result);
+      // Save globally (skip non-food inputs so they don't count toward totals)
+      if (result.foodName !== 'No food detected') addLog(result);
     } catch (e) {
       setMessages(prev => prev.filter(m => m.type !== 'loading'));
-      addMessage({ role: 'assistant', type: 'text', content: 'Oops! I had trouble analyzing that. Please try again.' });
+      addMessage({ role: 'assistant', type: 'text', content: `Oops! I had trouble analyzing that. ${e?.message || 'Please try again.'}` });
       console.error(e);
     } finally {
       setIsAnalyzing(false);

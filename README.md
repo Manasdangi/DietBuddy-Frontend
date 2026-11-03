@@ -1,4 +1,16 @@
-# Welcome to your Expo app 👋
+# DietBuddy
+
+A React Native (Expo) diet and nutrition assistant. Log meals by photo, voice note or text, and Gemini AI estimates calories, protein, carbs and fat.
+
+## Setup
+
+1. Deploy the API in [`server/`](server/README.md) (it holds the Gemini key).
+2. Copy `.env.example` to `.env` and set `EXPO_PUBLIC_API_URL` to the deployed URL.
+3. `npm install`, then `npx expo start`.
+
+Meal logs and daily totals are saved on the device and reset each day; history is kept.
+
+---
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
